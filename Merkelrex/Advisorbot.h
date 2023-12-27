@@ -1,17 +1,31 @@
 #pragma once
 #include "OrderBook.h"
-#include<string>
+#include <iostream>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <cstdlib>
 
 class Advisorbot
 {
 public:
 	Advisorbot();
 	// I have taken help from the module given code for the init function
-	void init(); // start the advisorbot 
+	void init(); // start the advisorbot
+
+	std::string cleanFunctionName(const std::string& input) {
+		std::string result = input;
+		while (!result.empty() && result.back() == ',') {
+			result.pop_back();
+		}
+		return result;
+	}
 
 private:
 	/** print the start statement of the simulation */
 	void printStartStatement();
+
+	
 
 	// I have taken help from the module given code for the getUserInput function
 	/** get the user input */

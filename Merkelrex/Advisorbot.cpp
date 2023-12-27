@@ -4,6 +4,9 @@
 #include <string>
 #include<cmath>
 #include "Command.h"
+#include <sstream>
+#include <iterator>
+#include <array>
 
 Advisorbot::Advisorbot()
 {
@@ -345,13 +348,60 @@ void Advisorbot::exitProgram()
 	exit(0); // exit the program
 }
 
+// Function to convert a string to OrderBookType
+OrderBookType stringToOrderBookType(const std::string& str)
+{
+	// Implement the conversion logic based on your enum definition
+	// For simplicity, assuming "Bid" and "Ask" are the possible values
+	if (str == "bid")
+		return OrderBookType::bid;
+	else return OrderBookType::ask;
+}
+
+
+// Function to escape special characters in a string
+std::string escapeSpecialCharacters(const std::string& input) {
+	std::string result;
+
+	for (char ch : input) {
+		switch (ch) {
+		case '\"':
+			result += "\\\"";
+			break;
+		case '\\':
+			result += "\\\\";
+			break;
+		case '\b':
+			result += "\\b";
+			break;
+		case '\f':
+			result += "\\f";
+			break;
+		case '\n':
+			result += "\\n";
+			break;
+		case '\r':
+			result += "\\r";
+			break;
+		case '\t':
+			result += "\\t";
+			break;
+		default:
+			result += ch;
+			break;
+		}
+	}
+
+	return result;
+}
+
 void Advisorbot::processUserInput(std::string userInput)
 {
-	std::vector<std::string> tokens;
+	//std::vector<std::string> tokens;
 
-	tokens = Command::tokenise(userInput, ' '); // tokenise the user input
+	//tokens = Command::tokenise(userInput, ' '); // tokenise the user input
 
-	if (tokens.size() == 0 || tokens.size() > 4)  // check if user input is empty 
+	/*if (tokens.size() == 0 || tokens.size() > 4)  // check if user input is empty 
 	{
 		printErrorMessage();
 	}
@@ -454,11 +504,11 @@ void Advisorbot::processUserInput(std::string userInput)
 			{
 				if (tokens[2] == "ask")
 				{
-					std::cout << "advisorbot> The Standard Deviation for product " << tokens[1] << " ask price in the current timestep is " << variance(tokens[1], OrderBookType::ask) << std::endl;
+					std::cout << "advisorbot> The Standard Deviation for product " << tokens[1] << " ask price in the current timestep is " << standardDeviation(tokens[1], OrderBookType::ask) << std::endl;
 				}
 				else if (tokens[2] == "bid")
 				{
-					std::cout << "advisorbot> The Standard Deviation for product " << tokens[1] << " bid price in the current timestep is " << variance(tokens[1], OrderBookType::bid) << std::endl;
+					std::cout << "advisorbot> The Standard Deviation for product " << tokens[1] << " bid price in the current timestep is " << standardDeviation(tokens[1], OrderBookType::bid) << std::endl;
 				}
 				else
 				{
@@ -562,9 +612,161 @@ void Advisorbot::processUserInput(std::string userInput)
 		{
 			printErrorMessage();
 		}
+	}*/
+	const char* serverEndpoint = "http://localhost:3000/message";
+    std::string escapedUserCommand = escapeSpecialCharacters(userInput);
+
+    const char* curlPath = "C:\\Windows\\SysWOW64\\curl.exe";
+
+    // Create the command to send the user message to the server
+    char command[256];
+    snprintf(command, sizeof(command), "%s -X POST -H \"Content-Type: application/json\" -d \"{\\\"message\\\":\\\"%s\\\"}\" %s", curlPath, escapedUserCommand.c_str(), serverEndpoint);
+
+    // Create a buffer to capture the standard output of the command
+    constexpr int bufferSize = 4096;
+    std::array<char, bufferSize> buffer;
+
+    // Open a pipe to capture the standard output of the command
+    FILE* pipe = _popen(command, "r");
+    if (!pipe)
+    {
+        std::cerr << "Error opening pipe.\n";
+        return;
+    }
+
+    // Read the standard output of the command
+    std::string serverResponse;
+    while (fgets(buffer.data(), bufferSize, pipe) != nullptr)
+    {
+        serverResponse += buffer.data();
+    }
+
+    // Close the pipe
+    _pclose(pipe);
+
+    // Process the server response as needed
+    std::cout << "Server response: " << serverResponse << std::endl;
+
+    // Extract Python Output
+    std::string pythonOutput;
+    size_t pythonOutputStart = serverResponse.find("Python Output: ");
+    if (pythonOutputStart != std::string::npos)
+    {
+        pythonOutput = serverResponse.substr(pythonOutputStart + 15); // 15 is the length of "Python Output: "
+    }
+
+    // Process the Python output
+	if (!pythonOutput.empty())
+	{
+		// Check if the Python output contains "No answer"
+		if (pythonOutput.find("No answer") != std::string::npos)
+		{
+			std::cout << "Please ask a question in the context of the currency trading application.\n";
+			std::cout << "Refer to the following commands:\n";
+			std::cout << "help - Displays this help message.\n";
+			std::cout << "help <cmd> - Provides help for a specific command.\n";
+			// Include other commands as needed
+		}
+		else
+		{
+			// Split the Python output into tokens using a stringstream
+			std::istringstream iss(pythonOutput);
+			std::vector<std::string> tokens(std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>());
+
+			// Remove unwanted characters from the last token
+			if (!tokens.empty())
+			{
+				for (int i = 0; i < 6; ++i)
+				{
+					if (!tokens.back().empty())
+					{
+						tokens.back().pop_back();
+					}
+					else
+					{
+						// Handle the case where the last token is empty
+						break;
+					}
+				}
+
+				// Print the extracted function name and parameters for debugging
+				std::cout << "Extracted Function Name: " << tokens[0] << std::endl;
+				std::cout << "Extracted Parameters: ";
+
+				for (size_t i = 1; i < tokens.size(); ++i)
+				{
+					std::cout << tokens[i] << " ";
+				}
+
+
+				// Process the function name
+				if (!tokens.empty())
+				{
+					// Process the function name
+					std::string functionName = cleanFunctionName(tokens[0]);
+
+					// Process the parameters
+					std::vector<std::string> parameters;
+					for (size_t i = 1; i < tokens.size(); ++i)
+					{
+						parameters.push_back(cleanFunctionName(tokens[i]));
+					};
+
+					// Execute the C++ function with parameters
+					if (functionName == "printHelp")
+					{
+						printHelp();
+					}
+					else if (functionName == "standardDeviation" && parameters.size() >= 2)
+					{
+						std::cout << "advisorbot> The Standard Deviation for product " << parameters[0] << " " << parameters[1] << " price in the current timestep is " << standardDeviation(parameters[0], stringToOrderBookType(parameters[1])) << std::endl;
+					}
+					else if (functionName == "findMin" && parameters.size() >= 2)
+					{
+						findMin(parameters[0], stringToOrderBookType(parameters[1]));
+					}
+					else if (functionName == "findMax" && parameters.size() == 3)
+					{
+						findMax(parameters[0], stringToOrderBookType(parameters[1]));
+					}
+					else if (functionName == "avg" && parameters.size() >= 3)
+					 {
+						 avg(parameters[0], stringToOrderBookType(parameters[1]), std::stoi(parameters[2]));
+					 }
+					 else if (functionName == "predict" && parameters.size() >= 3)
+					 {
+						 predict(parameters[0], stringToOrderBookType(parameters[1]), parameters[2]);
+					 }
+					 else if (functionName == "variance" && parameters.size() >= 2)
+					 {
+						std::cout << "advisorbot> The Variance for product " << parameters[0] << " " << parameters[1] << " price in the current timestep is " << variance(parameters[0], stringToOrderBookType(parameters[1])) << std::endl;
+					 }
+					 else if (functionName == "skewness" && parameters.size() >= 2)
+					 {
+						std::cout << "advisorbot> The Skewness for product " << parameters[0] << " ask price in the current timestep is " << skewness(parameters[0], stringToOrderBookType(parameters[1])) << std::endl;
+					 }
+					 else if (functionName == "printCurrentTimeframe" && parameters.empty())
+					 {
+						 printCurrentTimeframe();
+					 }
+					 else if (functionName == "gotoNextTimeframe" && parameters.empty())
+					 {
+						 gotoNextTimeframe();
+					 }
+					 else if (functionName == "exitProgram" && parameters.empty())
+					 {
+						 exitProgram();
+					 }
+					 else
+					 {
+						 std::cerr << "Invalid function name or parameters.\n" << parameters[0] << " " << parameters[1] << parameters.size();
+					 }
+				}
+				else
+				{
+					std::cerr << "Invalid Python output format.\n";
+				}
+			}
+		}
 	}
-
-	
-
-	
 }
