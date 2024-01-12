@@ -29,5 +29,5 @@ Advisorbot is built to deliver a seamless and efficient experience for users see
 - C++
 - Standard Template Library (STL)
 
-**Note:** Advisorbot communicates with a Node.js server to interpret user messages using AI from Anthropic and Hugging Face API to help execute the respective commands in the application. The server facilitates the interaction between the user and the application, which helps in providing real-time financial insights.
+**Note:** Advisorbot communicates with a [Node.js chat server](https://github.com/gpower-crypto/chat-server) that I built to interpret user messages using AI from Anthropic and Hugging Face API to help execute the respective commands in the application. The server facilitates the interaction between the user and the application, which helps in providing real-time financial insights.
 
